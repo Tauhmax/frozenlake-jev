@@ -1,5 +1,7 @@
 # Qwen3.5-0.8B bulk pilot (2026-10-08)
 
+**Prompt version:** original short prompt, before `frozenlake-state-v2`. The metrics below do not describe the later detailed-state prompt.
+
 Completed 1,000 unique maps / 4,000 state scores, fixed seed 42. Both map sizes (8x8, 12x12) have 500 maps. One safe state is sampled per map at each shortest-path distance 1, 2, 4, 8. Accepted maps must have a reachable start and contain all four distance bins. Labels use deterministic Gymnasium, value iteration with gamma 0.99, and an independent BFS cross-check.
 
 The frozen split contains 200 development maps and 800 test maps. The table below uses only the 3,200 test states; there is no map overlap with development. This is the first fixed-prompt run, not a result of prompt tuning on the test set.

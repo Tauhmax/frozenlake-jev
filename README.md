@@ -182,3 +182,40 @@ logs, datasets and predictions stay under ignored local directories.
 
 For Ascend, use the NPU environment from `NPU_ASCEND.md` and start the same
 service with `--device npu:0`. NPU execution remains unverified on this machine.
+
+## Detailed state format (v2)
+
+Every newly generated record includes `state_text` and
+`prompt_version: frozenlake-state-v2`. The numeric `state` is still the Gymnasium
+state ID. `state_text` is the complete model-facing input: full rules, tile
+legend, zero-based coordinates, player and goal positions, row/column-labeled
+map, deterministic moves, out-of-bounds self-loops, terminal holes and goal,
+reward, discount, infinite-horizon objective, and letter-to-action mapping.
+It is derived only from the visible board and gamma. Oracle values, distances,
+and optimal-action labels are separate fields and are never put into this text.
+See [the complete example](docs/state-example.md).
+
+The HTTP service also accepts structured inputs, for example:
+
+```json
+{"states": [{"board": "PF\nFG", "gamma": 0.99}]}
+```
+
+Send this JSON to `POST /score` instead of `prompts`; the server builds the full
+state description. Existing raw `prompts` requests remain available. `/health`
+reports the active prompt version. Restart the service after editing prompt code.
+
+The existing 1,000-map data have been regenerated with identical maps, sampled
+states and labels at `results/datasets/frozenlake-1000-state-v2.jsonl`. New scores
+must use a fresh output file; results from the original short prompt remain an
+archived baseline. To score the detailed states:
+
+```bash
+.venv-qwen35/Scripts/python -m src.evaluation.bulk --dataset results/datasets/frozenlake-1000-state-v2.jsonl --output results/predictions/qwen35-1000-state-v2.jsonl --batch-size 8
+```
+
+The v2 prompt and structured HTTP path were checked on eight development states.
+The complete 4,000-state v2 inference has not been run. This is a revised prompt
+on the same fixed maps, so a future comparison is exploratory; it is not a fresh
+untouched test set. The bulk client rejects stale `state_text` and mismatched
+cache manifests rather than mixing prompt versions.

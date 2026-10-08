@@ -10,6 +10,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from src.agents.jev import ChoiceTokenJev
+from src.agents.prompt import PROMPT_VERSION, format_prompt
 
 
 def main():
@@ -36,6 +37,7 @@ def main():
         "transformers": version("transformers"),
         "scoring_code_sha256": hashlib.sha256(source).hexdigest(),
         "seed": 42,
+        "prompt_version": PROMPT_VERSION,
         "max_batch_size": 16,
         "max_input_tokens": 2048,
     }
@@ -64,7 +66,24 @@ def main():
                 if not 0 < length <= 1_000_000:
                     raise ValueError("Request body must be between 1 byte and 1 MB")
                 data = json.loads(self.rfile.read(length))
+                if "states" in data and "prompts" in data:
+                    raise ValueError("Supply either states or prompts, not both")
                 prompts = data.get("prompts")
+                if "states" in data:
+                    states = data["states"]
+                    if (
+                        not isinstance(states, list)
+                        or not 1 <= len(states) <= 16
+                        or any(
+                            not isinstance(s, dict) or "board" not in s for s in states
+                        )
+                    ):
+                        raise ValueError(
+                            "states must contain 1 to 16 objects with board"
+                        )
+                    prompts = [
+                        format_prompt(s["board"], s.get("gamma", 0.99)) for s in states
+                    ]
                 if (
                     not isinstance(prompts, list)
                     or not 1 <= len(prompts) <= 16

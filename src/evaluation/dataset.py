@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from src.agents.prompt import PROMPT_VERSION, format_prompt
 from src.environments.frozenlake import make_env, render_state
 from src.environments.map_generator import generate_maps
 from src.oracles.optimal_q import optimal_actions, value_iteration
@@ -22,6 +23,7 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     gamma = 0.99
     metadata = {
+        "prompt_version": PROMPT_VERSION,
         "maps": args.maps,
         "seed": args.seed,
         "sizes": [8, 12],
@@ -70,6 +72,8 @@ def main():
                         "unique_optimal": len(optimal) == 1,
                         "solver": solver,
                     }
+                    row["prompt_version"] = PROMPT_VERSION
+                    row["state_text"] = format_prompt(row["board"], gamma)
                     stream.write(json.dumps(row) + "\n")
             finally:
                 env.close()

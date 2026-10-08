@@ -6,7 +6,7 @@ from pathlib import Path
 
 from src.agents.actions import DIRECTIONS, LETTERS
 from src.agents.jev import ChoiceTokenJev
-from src.agents.prompt import format_prompt
+from src.agents.prompt import PROMPT_VERSION, format_prompt
 from src.environments.frozenlake import make_env, render_state
 from src.evaluation.metrics import score
 from src.oracles.optimal_q import optimal_actions, value_iteration
@@ -49,10 +49,10 @@ def main():
                 "v_star": float(max(q)),
                 "optimal_actions": optimal,
             }
+            row["prompt_version"] = PROMPT_VERSION
+            row["state_text"] = format_prompt(row["board"], config["gamma"])
             if policy and row["reachable"]:
-                prediction = policy.predict(
-                    format_prompt(row["board"], config["gamma"])
-                )
+                prediction = policy.predict(row["state_text"])
                 row["prediction"] = prediction
                 row["metrics"] = score(
                     prediction["action"], prediction["probabilities"], q, optimal

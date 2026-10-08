@@ -8,7 +8,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from src.agents.prompt import format_prompt
+from src.agents.prompt import PROMPT_VERSION, format_prompt
 from src.evaluation.metrics import score
 from src.evaluation.report import build_report
 
@@ -46,6 +46,7 @@ def main():
         "dataset_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
         "model": health["model"],
         "batch_size": args.batch_size,
+        "prompt_version": PROMPT_VERSION,
         "metric_code_sha256": hashlib.sha256(
             Path("src/evaluation/metrics.py").read_bytes()
         ).hexdigest(),
@@ -86,7 +87,17 @@ def main():
     with output.open("a", encoding="utf-8", newline="\n") as stream:
         for start in range(0, len(pending), args.batch_size):
             batch = pending[start : start + args.batch_size]
-            prompts = [format_prompt(row["board"], row["gamma"]) for row in batch]
+            prompts = []
+            for row in batch:
+                text = format_prompt(row["board"], row["gamma"])
+                if "state_text" in row and (
+                    row.get("prompt_version") != PROMPT_VERSION
+                    or row["state_text"] != text
+                ):
+                    raise RuntimeError(
+                        "Dataset state_text is stale; regenerate the dataset"
+                    )
+                prompts.append(text)
             predictions = request(args.url + "/score", {"prompts": prompts})[
                 "predictions"
             ]
@@ -103,6 +114,8 @@ def main():
                     raise RuntimeError("Invalid model probability vector or action")
                 result = {
                     **row,
+                    "prompt_version": PROMPT_VERSION,
+                    "state_text": format_prompt(row["board"], row["gamma"]),
                     "prediction": prediction,
                     "metrics": score(
                         prediction["action"],
