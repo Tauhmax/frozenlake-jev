@@ -47,7 +47,7 @@ Other complete HF causal model folders can be supplied with `--model-dir`.
 
 ## Qwen3.5-0.8B comparison
 
-This newer architecture needs a separate Python >= 3.10 / Transformers 5 runtime.
+This newer architecture needs a separate Python >= 3.10 / Transformers 5.19 runtime.
 On this machine Python 3.11 is available in the existing `decision-pfn` environment;
 only its interpreter is used to create a new isolated project environment:
 
@@ -60,6 +60,17 @@ only its interpreter is used to create a new isolated project environment:
 ```
 
 The official checkpoint is pinned to `2fc06364715b967f1860aea9cf38778875588b17`.
+To run the 4B model in the same modern environment, add the CUDA-only
+quantization backend and use the identical Transformers version:
+
+```bash
+.venv-qwen35/Scripts/python -m pip install bitsandbytes==0.46.1
+.venv/Scripts/python scripts/download_model.py --model qwen3-4b
+.venv-qwen35/Scripts/python -m src.run --model-dir models/Qwen3-4B-Instruct-2507 --device cuda --load-in-4bit --output results/qwen4b-t519.json
+```
+
+The local pilot scored the same 11 safe states for both models; it is a smoke
+comparison on one map, not the held-out benchmark.
 It loads the full conditional-generation model but only supplies text inputs.
 Thinking is disabled by the chat template. Its roughly 1.75GB weights fit without
 quantization; compare as **Qwen3.5-0.8B BF16 vs Qwen3-4B NF4**, not a controlled
@@ -112,6 +123,9 @@ and [Hugging Face chat templates](https://huggingface.co/docs/transformers/v4.48
 
 Qwen3.8 currently refers here to the official `Qwen3.8-27B` checkpoint, which
 has 28B parameters and BF16 weights; it is not feasible to run locally on this
-RTX 3070 with 8GB VRAM. Qwen3.5-0.8B is the selected local comparison model.
+RTX 3070 with 8GB VRAM. It uses the same `qwen3_5` architecture identifier as
+Qwen3.5 and the modern loader selects that architecture's multimodal model class.
+Transformers 5.19 is pinned in the newer runtime. Qwen3.5-0.8B is the local
+comparison model; 27B local inference is not verified.
 For Huawei Ascend NPU setup, see [NPU_ASCEND.md](NPU_ASCEND.md). The code imports
 `torch_npu` only when `--device npu` is requested and synchronizes NPU timings.

@@ -20,12 +20,11 @@ older cards/drivers. Follow the compatibility table when versions differ.
 
 ```bash
 source /usr/local/Ascend/cann/set_env.sh
-python3 -m venv --system-site-packages .venv-npu
+python3 -m venv .venv-npu
 source .venv-npu/bin/activate
 python -m pip install --upgrade pip
 # Install the matching torch wheel and torch-npu wheel for your CANN/card here.
-python -m pip install --no-deps -r requirements-qwen35.txt
-python -m pip install huggingface-hub==0.30.2
+python -m pip install -r requirements-qwen35.txt
 python -c 'import torch, torch_npu; print(torch.__version__, torch.npu.is_available())'
 ```
 
