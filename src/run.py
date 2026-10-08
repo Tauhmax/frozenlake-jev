@@ -17,13 +17,18 @@ def main():
     parser.add_argument("--config", default="configs/frozenlake.json")
     parser.add_argument("--model-dir", help="Local HF model; omit for oracle only")
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--load-in-4bit", action="store_true")
     parser.add_argument("--output", default="results/run.json")
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text(encoding="utf-8"))
     output = Path(args.output)
     if output.exists():
         parser.error(f"Output exists: {output}. Use a new path to preserve cache.")
-    policy = ChoiceTokenJev(args.model_dir, args.device) if args.model_dir else None
+    policy = (
+        ChoiceTokenJev(args.model_dir, args.device, args.load_in_4bit)
+        if args.model_dir
+        else None
+    )
     if policy:
         policy.torch.manual_seed(config["seed"])
     env = make_env(config["map"])

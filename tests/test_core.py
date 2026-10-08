@@ -48,8 +48,8 @@ class CoreTests(unittest.TestCase):
                 return [ord(c) for c in text]
 
         prefix, ids, choices = prepare_choice_tokens(Tokenizer(), "Map")
-        self.assertTrue(prefix.endswith("Answer:"))
-        self.assertEqual(ids[-1], ord(":"))
+        self.assertTrue(prefix.endswith("Answer:\n"))
+        self.assertEqual(ids[-1], 10)
         self.assertEqual(choices, [65, 66, 67, 68])
 
         class BadTokenizer(Tokenizer):

@@ -27,9 +27,9 @@ def prepare_choice_tokens(tokenizer, prompt):
         if prefix.count("<think>") > prefix.count("</think>"):
             raise ValueError("Chat template leaves an open thinking block")
     else:
-        prefix = prompt + "\nAnswer:"
-    # Explicit assistant prefill fixes the position being scored.
-    prefix += "Answer:" if tokenizer.chat_template else ""
+        prefix = prompt
+    # A newline prevents the colon from merging with the next choice token.
+    prefix += "Answer:\n"
     input_ids = tokenizer.encode(prefix, add_special_tokens=False)
     choices = []
     for letter in LETTERS:
