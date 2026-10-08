@@ -31,3 +31,13 @@ Verified checks: `python -m unittest discover -s tests -v`,
 `python -m ruff check src tests`, `python -m ruff format --check src tests`.
 Optional model dependencies are in `requirements-model.txt`; real model inference
 has not yet been verified. Keep the implementation lightweight and tests focused.
+
+## Bulk evaluation
+
+Serve a loaded model with `python -m src.serve --model-dir MODEL --device cuda`.
+Use the Python 3.11 / Transformers 5.19 environment for Qwen3.5 and newer models.
+Generate map-held-out data with `python -m src.evaluation.dataset --maps 1000`;
+score it with `python -m src.evaluation.bulk --batch-size 8`.
+The bulk output resumes from JSONL; preserve its manifest and do not mix model,
+prompt, precision or batch-size changes into an existing cache. Bind the service
+to loopback and keep model weights / results out of Git.

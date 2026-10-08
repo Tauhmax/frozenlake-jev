@@ -129,3 +129,56 @@ Transformers 5.19 is pinned in the newer runtime. Qwen3.5-0.8B is the local
 comparison model; 27B local inference is not verified.
 For Huawei Ascend NPU setup, see [NPU_ASCEND.md](NPU_ASCEND.md). The code imports
 `torch_npu` only when `--device npu` is requested and synchronizes NPU timings.
+
+## Local HTTP service and bulk maps
+
+Use the modern Python 3.11 / Transformers 5.19 environment for this workflow.
+The model remains loaded between HTTP requests. The service binds only to
+`127.0.0.1`, defaults to port 8000, and processes batches sequentially on one device.
+
+```bash
+.venv-qwen35/Scripts/python -m src.serve --model-dir models/Qwen3.5-0.8B --device cuda --port 8000
+```
+
+Run the following in a second Git Bash terminal:
+
+```bash
+curl http://127.0.0.1:8000/health
+.venv-qwen35/Scripts/python -m src.evaluation.dataset --maps 1000 --seed 42
+.venv-qwen35/Scripts/python -m src.evaluation.bulk --batch-size 8
+```
+
+The dataset command refuses to overwrite a file; use a new `--output` to create
+another dataset. The default dataset contains 1,000 distinct maps (500 each of
+8x8 and 12x12), with one uniformly sampled safe state at distances 1, 2, 4 and 8
+per map. Accepted maps must have a reachable start and all four distance groups.
+This conditioning is part of the sampling protocol. Each map's VI labels are
+cross-checked against BFS before writing. Seed 42 fixes map generation and state
+sampling. Every fifth map is development data; the other 800 maps are test data.
+This keeps both sizes balanced and never splits states from a map across sets.
+
+`GET /health` returns readiness and the model/runtime fingerprint. `POST /score`
+accepts `{"prompts": ["...", "..."]}` and returns `predictions`. Prompts should be
+built with `src.agents.prompt.format_prompt`. Batches contain 1..16 inputs with
+at most 2,048 tokens each. The service uses one forward pass for a batch and
+only requests last-position logits when the model supports it. `forward_seconds`
+is the amortized batch time per state; `batch_forward_seconds` and `batch_size`
+are also saved. BF16 scores can differ slightly between batch sizes; keep the
+same batch size throughout a comparison.
+
+Bulk scoring writes JSONL predictions after each batch to
+`results/predictions/qwen35-1000.jsonl`. Re-running the same command resumes that
+cache. A manifest locks the dataset checksum, checkpoint, framework, scoring
+code and batch size; changes require a different `--output`. A torn final line
+from interruption is discarded on resume. `--limit 32` runs an optional pilot;
+remove it to score the remaining states. Stop the foreground service with Ctrl+C.
+
+The adjacent `.summary.json` reports dev/test separately, distance groups, map
+sizes, unique-optimum subsets, accuracy, Q-regret, optimal probability mass,
+binary Brier score, 10-bin ECE, and random-policy expectations. Accuracy and
+regret intervals use 1,000 map-level bootstrap resamples. Raw predictions are
+retained so analysis does not require another model run. Model weights, server
+logs, datasets and predictions stay under ignored local directories.
+
+For Ascend, use the NPU environment from `NPU_ASCEND.md` and start the same
+service with `--device npu:0`. NPU execution remains unverified on this machine.
