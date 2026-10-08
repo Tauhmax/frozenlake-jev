@@ -1,0 +1,8 @@
+gymnasium==1.0.0
+numpy==1.26.4
+cloudpickle==3.1.2
+farama-notifications==0.0.6
+importlib-metadata==8.7.1
+typing-extensions==4.16.0
+zipp==3.23.1
+ruff==0.11.13
