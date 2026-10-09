@@ -41,3 +41,5 @@ score it with `python -m src.evaluation.bulk --batch-size 8`.
 The bulk output resumes from JSONL; preserve its manifest and do not mix model,
 prompt, precision or batch-size changes into an existing cache. Bind the service
 to loopback and keep model weights / results out of Git.
+
+Full-game evaluation: `.venv-qwen35/Scripts/python -m src.evaluation.episodes --max-steps 30 --batch-size 16` (requires local model service). One episode per map from S; resume caches include complete executed steps. Finite-horizon oracle labels account for the remaining move budget.

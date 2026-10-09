@@ -33,3 +33,19 @@ def value_iteration(env, gamma=0.99, tolerance=1e-12, max_iterations=10000):
 
 def optimal_actions(q_values, tolerance=1e-9):
     return np.flatnonzero(np.abs(q_values - np.max(q_values)) <= tolerance).tolist()
+
+
+def finite_horizon_q(env, max_steps=30, gamma=0.99):
+    """Q[h, state, action] with h moves left; horizon zero has no reward."""
+    if max_steps < 1 or not 0 <= gamma <= 1:
+        raise ValueError("Require positive horizon and 0 <= gamma <= 1")
+    result = np.zeros((max_steps + 1, env.observation_space.n, env.action_space.n))
+    for horizon in range(1, max_steps + 1):
+        previous = result[horizon - 1].max(axis=1)
+        for state, actions in env.P.items():
+            for action, transitions in actions.items():
+                result[horizon, state, action] = sum(
+                    p * (reward + gamma * previous[nxt] * (not terminal))
+                    for p, nxt, reward, terminal in transitions
+                )
+    return result

@@ -10,7 +10,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from src.agents.jev import ChoiceTokenJev
-from src.agents.prompt import PROMPT_VERSION, format_prompt
+from src.agents.prompt import EPISODE_PROMPT_VERSION, PROMPT_VERSION, format_prompt
 
 
 def main():
@@ -38,6 +38,7 @@ def main():
         "scoring_code_sha256": hashlib.sha256(source).hexdigest(),
         "seed": 42,
         "prompt_version": PROMPT_VERSION,
+        "episode_prompt_version": EPISODE_PROMPT_VERSION,
         "max_batch_size": 16,
         "max_input_tokens": 2048,
     }
@@ -82,7 +83,10 @@ def main():
                             "states must contain 1 to 16 objects with board"
                         )
                     prompts = [
-                        format_prompt(s["board"], s.get("gamma", 0.99)) for s in states
+                        format_prompt(
+                            s["board"], s.get("gamma", 0.99), s.get("remaining_steps")
+                        )
+                        for s in states
                     ]
                 if (
                     not isinstance(prompts, list)

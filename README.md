@@ -215,7 +215,38 @@ archived baseline. To score the detailed states:
 ```
 
 The v2 prompt and structured HTTP path were checked on eight development states.
-The complete 4,000-state v2 inference has not been run. This is a revised prompt
+The complete 4,000-state v2 inference is recorded in [the comparison report](docs/bulk-state-v2.md). This is a revised prompt
 on the same fixed maps, so a future comparison is exploratory; it is not a fresh
 untouched test set. The bulk client rejects stale `state_text` and mismatched
 cache manifests rather than mixing prompt versions.
+
+## Full games: 30-move episodes
+
+The 4,000-state benchmark samples four independent positions per map; it does
+not measure game completion. To play each of the 1,000 maps from its actual S:
+
+```bash
+.venv-qwen35/Scripts/python -m src.evaluation.episodes --max-steps 30 --batch-size 16
+```
+
+Start the local model service first as described above. Each map has exactly one
+episode. At every step the model sees the complete current board, game rules,
+and remaining move budget (`frozenlake-episode-v1`). Choose argmax among the four
+choice-token probabilities, execute that action, and repeat until G, H, or 30
+moves. Reaching G on move 30 succeeds. Boundary collisions consume moves; loops
+are allowed to continue until the budget expires. Batches contain independent
+games, never future steps from the same game.
+
+Finite-horizon Bellman backups supply Q values for each remaining budget.
+These labels are recorded for analysis and never supplied to the model.
+Maps whose shortest safe S-to-G path exceeds 30 moves remain in the evaluation;
+reports also give success among maps that an optimal policy can solve in time.
+The existing dev/test map split is preserved.
+
+Output `results/episodes/qwen35-max30.jsonl` contains every executed transition,
+full model prompt/probabilities, finite-horizon Q labels, and terminal/timeout
+flags. Adjacent `.episodes.json`, `.summary.json`, and `.meta.json` files contain
+game outcomes, aggregate results, and reproducibility settings. Re-running the
+same command validates and replays cached actions, then resumes unfinished
+games without scoring saved steps again. Changed settings require a new output.
+Raw trajectories and local models are ignored by Git.

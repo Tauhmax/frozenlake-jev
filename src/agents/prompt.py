@@ -5,9 +5,10 @@ import math
 from src.agents.actions import DIRECTIONS, LETTERS
 
 PROMPT_VERSION = "frozenlake-state-v2"
+EPISODE_PROMPT_VERSION = "frozenlake-episode-v1"
 
 
-def format_prompt(board, gamma):
+def format_prompt(board, gamma, remaining_steps=None):
     rows = board.splitlines()
     if not rows or not rows[0] or any(len(r) != len(rows[0]) for r in rows):
         raise ValueError("Board must be a nonempty rectangle")
@@ -16,6 +17,22 @@ def format_prompt(board, gamma):
         raise ValueError("Board must contain one P, one G, and only P/F/H/G")
     if not math.isfinite(gamma) or not 0 <= gamma < 1:
         raise ValueError("Discount must be finite and satisfy 0 <= gamma < 1")
+    if remaining_steps is not None and (
+        not isinstance(remaining_steps, int)
+        or isinstance(remaining_steps, bool)
+        or remaining_steps < 1
+    ):
+        raise ValueError("Remaining steps must be a positive integer")
+    horizon = (
+        "This decision uses an infinite-horizon discounted objective; there is "
+        "no remaining-step budget or rollout time limit in this state evaluation. "
+        if remaining_steps is None
+        else f"You have {remaining_steps} moves remaining, INCLUDING the next move. "
+        "Reach G within these moves. If the final allowed move does not reach G "
+        "or enter H, the game ends in TIMEOUT with no extra reward. Reaching G "
+        "on the final allowed move still counts as SUCCESS. "
+        "Edge collisions and revisits also consume this remaining budget. "
+    )
     height, width = len(rows), len(rows[0])
     player = divmod(cells.index("P"), width)
     goal = divmod(cells.index("G"), width)
@@ -60,9 +77,8 @@ def format_prompt(board, gamma):
         "next move gives return 1; reaching it after k moves gives "
         "gamma^(k-1). Never reaching G gives return 0. For 0 < gamma < 1, "
         "a shorter safe route to G is better than a longer safe route.",
-        "This decision uses an infinite-horizon discounted objective; there is "
-        "no remaining-step budget or rollout time limit in this state evaluation. "
-        "If several actions have equally best return, any of them is correct.",
+        horizon
+        + "If several actions have equally best return, any of them is correct.",
         "",
         "CURRENT STATE:",
         f"Player P: row {player[0]}, column {player[1]}.",

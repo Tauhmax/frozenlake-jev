@@ -40,6 +40,26 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(env.P[0][2][0], (1.0, 1, 0.0, True))
         np.testing.assert_array_equal(value_iteration(env)[0], np.zeros((3, 4)))
 
+    def test_episode_horizon_and_last_move(self):
+        from src.agents.prompt import format_prompt
+        from src.evaluation.episodes import outcome
+        from src.oracles.optimal_q import finite_horizon_q
+
+        env = make_env(["SFG"])
+        self.addCleanup(env.close)
+        q = finite_horizon_q(env, 30)
+        self.assertEqual(max(q[1, 0]), 0)
+        self.assertAlmostEqual(max(q[2, 0]), 0.99)
+        self.assertEqual(q[1, 1, 2], 1)
+        self.assertEqual(max(q[30, 2]), 0)
+        self.assertEqual(outcome(1, True, 30, 30), "success")
+        self.assertEqual(outcome(0, True, 30, 30), "hole")
+        self.assertEqual(outcome(0, False, 30, 30), "timeout")
+        self.assertIsNone(outcome(0, False, 29, 30))
+        prompt = format_prompt("PFG", 0.99, 1)
+        self.assertIn("1 moves remaining", prompt)
+        self.assertNotIn("infinite-horizon", prompt)
+
     def test_choice_position_and_rejection(self):
         class Tokenizer:
             chat_template = None
