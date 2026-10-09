@@ -12,7 +12,7 @@ class ChoiceTokenJev:
     def __init__(self, model_dir, device="cpu", load_in_4bit=False):
         path = Path(model_dir).resolve()
         if not (path / "config.json").is_file():
-            raise ValueError(f"No local model in {path}; see models/base/README.md")
+            raise ValueError(f"No local model in {path}; see README.md")
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
@@ -30,7 +30,7 @@ class ChoiceTokenJev:
         )
         self.tokenizer = AutoTokenizer.from_pretrained(path, local_files_only=True)
         self.load_in_4bit = load_in_4bit
-        options = {"local_files_only": True, "torch_dtype": "auto"}
+        options = {"local_files_only": True, "dtype": "auto"}
         if load_in_4bit:
             if self.device.type != "cuda" or not torch.cuda.is_available():
                 raise ValueError("4-bit loading requires a CUDA device")

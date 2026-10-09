@@ -1,0 +1,5 @@
+# Ascend 910B2 / Linux / CANN 9.0.1 / Python 3.11.
+# Install torch==2.10.0 from the CPU wheel index first (see NPU_ASCEND.md).
+-r requirements.txt
+torch==2.10.0
+torch-npu==2.10.0.post2

@@ -3,6 +3,5 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 results/
-models/*/**
-!models/base/README.md
+models/
 .env

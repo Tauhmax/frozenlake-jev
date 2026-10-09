@@ -1,6 +1,0 @@
-# Python >= 3.10. Install the matching PyTorch/accelerator runtime separately.
-gymnasium==1.0.0
-numpy==1.26.4
-transformers==5.19.0
-accelerate==1.6.0
-pillow==11.3.0

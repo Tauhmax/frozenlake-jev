@@ -1,0 +1,5 @@
+# Verified on RTX 3070, Windows, Python 3.11.16.
+--extra-index-url https://download.pytorch.org/whl/cu124
+-r requirements.txt
+torch==2.6.0+cu124
+bitsandbytes==0.46.1

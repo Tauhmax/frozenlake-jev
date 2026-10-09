@@ -1,252 +1,110 @@
 # frozenlake-jev
 
-Minimal deterministic FrozenLake benchmark: value-iteration ground truth and
-local causal-LM choice-token JEV (one forward pass, zero generated tokens).
+在确定性 FrozenLake 上测试本地语言模型的决策能力。模型读取完整地图、游戏规则和剩余步数，单次前向计算 A/B/C/D 的 next-token 分数；不生成推理文本。Ground Truth 由 Gymnasium 转移表上的 Bellman 更新得到。
 
-## Setup (Git Bash, Windows)
+## 环境：所有模型共用一套版本
 
-Verified with Python 3.9.21:
+统一使用 **Python 3.11、Transformers 5.19.0**。Qwen3-4B 与 Qwen3.5-0.8B 已在这套框架上运行，不再按模型维护旧版 Transformers 环境。其他模型仍需验证其 tokenizer、架构和算子支持，不能仅凭版本号推断兼容。
+
+| 文件 | 用途 |
+|---|---|
+| `requirements.txt` | 所有模型与设备共享的依赖；不安装硬件运行库 |
+| `requirements-cuda.txt` | 公共依赖 + PyTorch 2.6.0/cu124 + bitsandbytes 0.46.1 |
+| `requirements-npu.txt` | 公共依赖 + PyTorch 2.10.0 / torch-npu 2.10.0.post2；910B2 / CANN 9.0.1 |
+| `requirements-dev.txt` | 公共依赖 + Ruff；用于开发检查 |
+
+CUDA 已验证：Windows、Python 3.11.16、RTX 3070 8GB。NPU 的主机条件、安装和验收步骤见 [NPU_ASCEND.md](NPU_ASCEND.md)，尚未在实体 NPU 验证。
+
+在仓库根目录操作。Windows 使用 Git Bash，Linux 使用 Bash；创建环境的 `python` 必须是 3.11：
 
 ```bash
+python --version
 python -m venv .venv
-source .venv/Scripts/activate
-python -m pip install -r requirements.txt
-python -m src.run
+source .venv/Scripts/activate       # Windows Git Bash
+# source .venv/bin/activate         # Linux
+python -m pip install --upgrade pip
+python -m pip install -r requirements-cuda.txt
+python -m pip check
 ```
 
-On Linux/macOS use `source .venv/bin/activate` instead.
-The default run needs no model. It writes `results/run.json`: 11 safe states,
-6 VI iterations, zero Bellman residual on the included map. Existing outputs
-are never overwritten; use `--output results/another-run.json` to run again.
+已有的 Python 3.11 / Transformers 5.19 环境可以继续使用，目录名不影响功能。正在运行实验时不要原地更换依赖。只有 CPU 时，先从 PyTorch CPU index 安装 `torch==2.6.0`，再安装 `requirements.txt`。
 
-## Local Qwen 4B (RTX 3070 / 8GB)
-
-The selected checkpoint is [Qwen3-4B-Instruct-2507](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507),
-a non-thinking instruction model. The download script pins its revision to
-`cdbee75f17c01a7cc42f958dc650907174af0554`.
+## 模型
 
 ```bash
-# Install CUDA PyTorch first (the verified machine uses an NVIDIA GPU).
-python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-python -m pip install -r requirements-model.txt
-python scripts/download_model.py
-python -m src.run --model-dir models/Qwen3-4B-Instruct-2507 --device cuda --load-in-4bit --output results/qwen4b.json
+python scripts/download_model.py --model qwen3.5-0.8b
+python scripts/download_model.py --model qwen3-4b
 ```
 
-The download contains roughly 8GB of original BF16 weights. Loading with
-`--load-in-4bit` quantizes linear layers to NF4 with double quantization and FP16
-compute. This is a quantized baseline, not a full-precision model result.
-Keep GPU memory free for loading and evaluation. Model files are ignored by Git.
-Only the explicit download script accesses Hugging Face; inference uses
-`local_files_only=True`. Re-running the download resumes incomplete files.
-The saved result includes checkpoint revision and quantization mode.
+下载脚本固定 checkpoint revision，模型目录包含 `checkpoint.json`。也可将完整本地 Hugging Face 模型目录复制到目标机器；推理只读本地文件。模型文件与结果不提交到 Git。
 
-Other complete HF causal model folders can be supplied with `--model-dir`.
-`models/base/` remains an empty example placeholder. CPU is the default when
-`--device` is omitted; the NF4 option requires CUDA.
+| 模型 | 本机运行方式 | 已验证范围 |
+|---|---|---|
+| Qwen3.5-0.8B | BF16 | CUDA 单状态及 1,000 局实验 |
+| Qwen3-4B-Instruct-2507 | NF4 | CUDA 加载及 choice-token 推理 |
 
-## Qwen3.5-0.8B comparison
+`--load-in-4bit` 使用 bitsandbytes 在加载时量化原始权重，NF4 + double quantization、FP16 计算，仅支持 CUDA。它不改写磁盘权重。NPU 使用未量化权重，不能传此参数。两种精度下的结果不能仅解释为参数规模差异。
 
-This newer architecture needs a separate Python >= 3.10 / Transformers 5.19 runtime.
-On this machine Python 3.11 is available in the existing `decision-pfn` environment;
-only its interpreter is used to create a new isolated project environment:
+## 完整游戏测试：1,000 张地图，每局最多 30 步
+
+第一个终端启动服务，选择其中一个模型：
 
 ```bash
-/d/anaconda/envs/decision-pfn/python.exe -m venv .venv-qwen35
-.venv-qwen35/Scripts/python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-.venv-qwen35/Scripts/python -m pip install -r requirements-qwen35.txt
-.venv/Scripts/python scripts/download_model.py --model qwen3.5-0.8b
-.venv-qwen35/Scripts/python -m src.run --model-dir models/Qwen3.5-0.8B --device cuda --output results/qwen35-08b.json
+python -u -m src.serve --model-dir models/Qwen3.5-0.8B --device cuda --port 8000
+# 或：
+python -u -m src.serve --model-dir models/Qwen3-4B-Instruct-2507 --device cuda --load-in-4bit --port 8000
 ```
 
-The official checkpoint is pinned to `2fc06364715b967f1860aea9cf38778875588b17`.
-To run the 4B model in the same modern environment, add the CUDA-only
-quantization backend and use the identical Transformers version:
-
-```bash
-.venv-qwen35/Scripts/python -m pip install bitsandbytes==0.46.1
-.venv/Scripts/python scripts/download_model.py --model qwen3-4b
-.venv-qwen35/Scripts/python -m src.run --model-dir models/Qwen3-4B-Instruct-2507 --device cuda --load-in-4bit --output results/qwen4b-t519.json
-```
-
-The local pilot scored the same 11 safe states for both models; it is a smoke
-comparison on one map, not the held-out benchmark.
-It loads the full conditional-generation model but only supplies text inputs.
-Thinking is disabled by the chat template. Its roughly 1.75GB weights fit without
-quantization; compare as **Qwen3.5-0.8B BF16 vs Qwen3-4B NF4**, not a controlled
-parameter-count experiment. Both use the same map, reward, prompt and scoring rule.
-
-JEV applies the tokenizer chat template when available, requests thinking off,
-and appends an explicit `Answer:\n` assistant prefill. Raw base tokenizers without
-a chat template receive a plain prompt. An unclosed `<think>` block is rejected.
-For each actual prompt, encoding `prefix + letter` must preserve the prefix and
-append exactly one distinct token. Other tokenizers fail explicitly. The last
-input position predicts the next token; only A/B/C/D logits are normalized at
-T=1. There is no generation, search, or trained head. Inspect the saved prompt
-and token IDs when validating a new checkpoint; mock tests do not establish
-real tokenizer/template compatibility.
-
-## Ground truth and results
-
-Edit `configs/frozenlake.json` for the rectangular map, gamma, tolerances and seed.
-Gymnasium's deterministic `P` transition table drives VI. Reward is 1 on entering
-the goal and 0 otherwise; terminal transitions never bootstrap. Gamma must be
-less than 1. Stopping uses the recorded Bellman residual. Goal/hole states are
-excluded from output; unreachable safe states are labeled and excluded from
-model scoring. Ties use absolute tolerance 1e-9 by default.
-
-The prompt states the same discounted objective as the oracle. A/B/C/D map to
-LEFT/DOWN/RIGHT/UP (0/1/2/3). Output records Q*, V*, all optimal actions and, when
-a model is supplied, prompt, token IDs, logits, restricted probabilities, latency,
-chosen action, accuracy, regret, optimal probability mass and binary Brier score.
-Restricted softmax is a relative action score, not calibrated optimality probability.
-Outputs serve as an offline cache; do not rerun inference to recompute metrics.
-Keep a model directory immutable and record its checkpoint revision alongside
-results. The seed is recorded; cross-device bitwise reproducibility is not promised.
-
-This intentionally implements one fixed map, not the full research plan:
-map generation/splits, plots, search baselines and aggregate calibration are future work.
-
-## Lightweight verification
-
-```bash
-python -m unittest discover -s tests -v
-python -m ruff check src tests
-python -m ruff format --check src tests
-```
-
-Two focused tests cover BFS-vs-VI values, ties, unreachable states, holes,
-boundaries, terminal values, and synthetic next-token position validation.
-
-Implementation references: [Gymnasium FrozenLake](https://gymnasium.farama.org/environments/toy_text/frozen_lake/)
-and [Hugging Face chat templates](https://huggingface.co/docs/transformers/v4.48.0/chat_templating).
-
-Qwen3.8 currently refers here to the official `Qwen3.8-27B` checkpoint, which
-has 28B parameters and BF16 weights; it is not feasible to run locally on this
-RTX 3070 with 8GB VRAM. It uses the same `qwen3_5` architecture identifier as
-Qwen3.5 and the modern loader selects that architecture's multimodal model class.
-Transformers 5.19 is pinned in the newer runtime. Qwen3.5-0.8B is the local
-comparison model; 27B local inference is not verified.
-For Huawei Ascend NPU setup, see [NPU_ASCEND.md](NPU_ASCEND.md). The code imports
-`torch_npu` only when `--device npu` is requested and synchronizes NPU timings.
-
-## Local HTTP service and bulk maps
-
-Use the modern Python 3.11 / Transformers 5.19 environment for this workflow.
-The model remains loaded between HTTP requests. The service binds only to
-`127.0.0.1`, defaults to port 8000, and processes batches sequentially on one device.
-
-```bash
-.venv-qwen35/Scripts/python -m src.serve --model-dir models/Qwen3.5-0.8B --device cuda --port 8000
-```
-
-Run the following in a second Git Bash terminal:
+看到 `READY` 后，第二个已激活环境的终端运行：
 
 ```bash
 curl http://127.0.0.1:8000/health
-.venv-qwen35/Scripts/python -m src.evaluation.dataset --maps 1000 --seed 42
-.venv-qwen35/Scripts/python -m src.evaluation.bulk --batch-size 8
+python -m src.evaluation.dataset --maps 1000 --seed 42 --output results/datasets/frozenlake-1000-state-v2.jsonl
+python -u -m src.evaluation.episodes --dataset results/datasets/frozenlake-1000-state-v2.jsonl --output results/episodes/qwen35-max30.jsonl --max-steps 30 --batch-size 16
 ```
 
-The dataset command refuses to overwrite a file; use a new `--output` to create
-another dataset. The default dataset contains 1,000 distinct maps (500 each of
-8x8 and 12x12), with one uniformly sampled safe state at distances 1, 2, 4 and 8
-per map. Accepted maps must have a reachable start and all four distance groups.
-This conditioning is part of the sampling protocol. Each map's VI labels are
-cross-checked against BFS before writing. Seed 42 fixes map generation and state
-sampling. Every fifth map is development data; the other 800 maps are test data.
-This keeps both sizes balanced and never splits states from a map across sets.
+已有同名数据集时直接复用，跳过生成命令。测试 4B 时将输出改为 `results/episodes/qwen4b-max30.jsonl`。若目标设备无法容纳当前批次，减小 `--batch-size` 并使用新输出文件。
 
-`GET /health` returns readiness and the model/runtime fingerprint. `POST /score`
-accepts `{"prompts": ["...", "..."]}` and returns `predictions`. Prompts should be
-built with `src.agents.prompt.format_prompt`. Batches contain 1..16 inputs with
-at most 2,048 tokens each. The service uses one forward pass for a batch and
-only requests last-position logits when the model supports it. `forward_seconds`
-is the amortized batch time per state; `batch_forward_seconds` and `batch_size`
-are also saved. BF16 scores can differ slightly between batch sizes; keep the
-same batch size throughout a comparison.
+每张地图从真实 S 开始。每次输入包含更新后的位置、完整规则和剩余预算；选择四个动作中分数最大的一个并执行。进入 G 成功、进入 H 失败，其余情况到 30 步超时；第 30 步进入 G 仍成功，撞边界和重复访问也消耗步数。模型不接收 oracle 标签。有限步数 Q 值随剩余预算变化。
 
-Bulk scoring writes JSONL predictions after each batch to
-`results/predictions/qwen35-1000.jsonl`. Re-running the same command resumes that
-cache. A manifest locks the dataset checksum, checkpoint, framework, scoring
-code and batch size; changes require a different `--output`. A torn final line
-from interruption is discarded on resume. `--limit 32` runs an optional pilot;
-remove it to score the remaining states. Stop the foreground service with Ctrl+C.
+生成器固定种子，地图大小 8×8/12×12 各半；接受起点可达且包含距目标 1/2/4/8 步状态的地图。每五张中的一张划为 dev，共 200 dev / 800 test，按地图划分。数据集每图四条单状态记录；整局执行器按地图去重，仍只从 S 跑一局。
 
-The adjacent `.summary.json` reports dev/test separately, distance groups, map
-sizes, unique-optimum subsets, accuracy, Q-regret, optimal probability mass,
-binary Brier score, 10-bin ECE, and random-policy expectations. Accuracy and
-regret intervals use 1,000 map-level bootstrap resamples. Raw predictions are
-retained so analysis does not require another model run. Model weights, server
-logs, datasets and predictions stay under ignored local directories.
+输出 `.jsonl` 保存每个实际动作、位置转移、完整提示、概率和 Q 值；相邻 `.episodes.json`、`.summary.json`、`.meta.json` 保存整局结果、汇总及配置。相同命令可续跑；模型、代码、提示词、精度或批次改变时使用新输出。缓存和 manifest 必须一起保留。不同硬件不保证逐位相同。
 
-For Ascend, use the NPU environment from `NPU_ASCEND.md` and start the same
-service with `--device npu:0`. NPU execution remains unverified on this machine.
+## 单状态诊断与接口
 
-## Detailed state format (v2)
+```bash
+python -m src.run --output results/oracle.json
+python -m src.evaluation.bulk --dataset results/datasets/frozenlake-1000-state-v2.jsonl --output results/predictions/qwen35-state-v2.jsonl --batch-size 8
+```
 
-Every newly generated record includes `state_text` and
-`prompt_version: frozenlake-state-v2`. The numeric `state` is still the Gymnasium
-state ID. `state_text` is the complete model-facing input: full rules, tile
-legend, zero-based coordinates, player and goal positions, row/column-labeled
-map, deterministic moves, out-of-bounds self-loops, terminal holes and goal,
-reward, discount, infinite-horizon objective, and letter-to-action mapping.
-It is derived only from the visible board and gamma. Oracle values, distances,
-and optimal-action labels are separate fields and are never put into this text.
-See [the complete example](docs/state-example.md).
+`src.run` 使用 `configs/frozenlake.json`，默认只算 oracle，可传 `--model-dir` 和 `--device`。`bulk` 独立评分每图抽样的四个位置，不计算通关率。已有输出不会被混入不同配置的结果。
 
-The HTTP service also accepts structured inputs, for example:
+服务仅绑定 `127.0.0.1`。`GET /health` 返回模型与框架版本；`POST /score` 接收以下一种格式：
 
 ```json
-{"states": [{"board": "PF\nFG", "gamma": 0.99}]}
+{"states": [{"board": "PF\nFG", "gamma": 0.99, "remaining_steps": 30}]}
 ```
 
-Send this JSON to `POST /score` instead of `prompts`; the server builds the full
-state description. Existing raw `prompts` requests remain available. `/health`
-reports the active prompt version. Restart the service after editing prompt code.
+也支持 `{"prompts": ["完整提示词"]}`。省略 `remaining_steps` 表示无限时域单状态评分。每批 1–16 个输入，每条最多 2,048 tokens。A/B/C/D 对应 LEFT/DOWN/RIGHT/UP；每个选项必须恰好是一个 next token。输出概率仅在四个动作间归一化，不等同于校准后的正确率。完整提示示例见 [state-example.md](docs/state-example.md)。
 
-The existing 1,000-map data have been regenerated with identical maps, sampled
-states and labels at `results/datasets/frozenlake-1000-state-v2.jsonl`. New scores
-must use a fresh output file; results from the original short prompt remain an
-archived baseline. To score the detailed states:
+## 结构与检查
+
+`src/environments/` 管理地图与转移；`src/oracles/` 计算最优 Q；`src/agents/` 管理提示及模型评分；`src/evaluation/` 管理数据、单状态及整局评估。`models/` 和 `results/` 是本地生成目录。
 
 ```bash
-.venv-qwen35/Scripts/python -m src.evaluation.bulk --dataset results/datasets/frozenlake-1000-state-v2.jsonl --output results/predictions/qwen35-1000-state-v2.jsonl --batch-size 8
+python -m pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v
+python -m ruff check src scripts tests
+python -m ruff format --check src scripts tests
 ```
 
-The v2 prompt and structured HTTP path were checked on eight development states.
-The complete 4,000-state v2 inference is recorded in [the comparison report](docs/bulk-state-v2.md). This is a revised prompt
-on the same fixed maps, so a future comparison is exploratory; it is not a fresh
-untouched test set. The bulk client rejects stale `state_text` and mismatched
-cache manifests rather than mixing prompt versions.
+保留三个聚焦测试：BFS 与 VI、终止和边界规则；有限时域与第 30 步终止；choice-token 位置验证。NPU 需要在目标机器额外完成实际模型前向验证。
 
-## Full games: 30-move episodes
+## 实验记录
 
-The 4,000-state benchmark samples four independent positions per map; it does
-not measure game completion. To play each of the 1,000 maps from its actual S:
+- [原始短提示单状态实验](docs/bulk-pilot.md)
+- [详细提示单状态对比](docs/bulk-state-v2.md)
+- [Qwen3.5-0.8B：1,000 局、30 步上限](docs/episodes-max30.md)：成功 225、掉洞 640、超时 135。
 
-```bash
-.venv-qwen35/Scripts/python -m src.evaluation.episodes --max-steps 30 --batch-size 16
-```
-
-Start the local model service first as described above. Each map has exactly one
-episode. At every step the model sees the complete current board, game rules,
-and remaining move budget (`frozenlake-episode-v1`). Choose argmax among the four
-choice-token probabilities, execute that action, and repeat until G, H, or 30
-moves. Reaching G on move 30 succeeds. Boundary collisions consume moves; loops
-are allowed to continue until the budget expires. Batches contain independent
-games, never future steps from the same game.
-
-Finite-horizon Bellman backups supply Q values for each remaining budget.
-These labels are recorded for analysis and never supplied to the model.
-Maps whose shortest safe S-to-G path exceeds 30 moves remain in the evaluation;
-reports also give success among maps that an optimal policy can solve in time.
-The existing dev/test map split is preserved.
-
-Output `results/episodes/qwen35-max30.jsonl` contains every executed transition,
-full model prompt/probabilities, finite-horizon Q labels, and terminal/timeout
-flags. Adjacent `.episodes.json`, `.summary.json`, and `.meta.json` files contain
-game outcomes, aggregate results, and reproducibility settings. Re-running the
-same command validates and replays cached actions, then resumes unfinished
-games without scoring saved steps again. Changed settings require a new output.
-Raw trajectories and local models are ignored by Git.
+这些实验记录保留实际运行时版本与数据哈希；同一批已评估地图上的比较属于探索性结果。
