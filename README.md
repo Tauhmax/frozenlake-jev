@@ -106,5 +106,6 @@ python -m ruff format --check src scripts tests
 - [原始短提示单状态实验](docs/bulk-pilot.md)
 - [详细提示单状态对比](docs/bulk-state-v2.md)
 - [Qwen3.5-0.8B：1,000 局、30 步上限](docs/episodes-max30.md)：成功 225、掉洞 640、超时 135。
+- [0.8B 与 4B 的同地图整局对比](docs/episodes-qwen-comparison.md)：4B 成功 298、掉洞 648、超时 54。
 
 这些实验记录保留实际运行时版本与数据哈希；同一批已评估地图上的比较属于探索性结果。
