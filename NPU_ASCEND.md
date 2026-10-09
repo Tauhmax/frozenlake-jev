@@ -8,7 +8,7 @@
 | 系统 | Linux，x86_64 或 aarch64，glibc ≥ 2.28 |
 | Python | 3.11 |
 | CANN | 9.0.1；驱动、固件及算子包须匹配该芯片 |
-| PyTorch | 2.10.0，CPU wheel |
+| PyTorch | 2.10.0+cpu |
 | torch-npu | 2.10.0.post2 |
 | Transformers | 5.19.0，与 CUDA 使用同一份公共依赖 |
 | 模型 | 原始 BF16；不使用 CUDA bitsandbytes |
@@ -29,7 +29,6 @@ source /usr/local/Ascend/cann/set_env.sh  # 按实际安装路径调整
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install torch==2.10.0 --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -r requirements-npu.txt
 python -m pip check
 ```

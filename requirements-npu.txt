@@ -1,5 +1,6 @@
-# Ascend 910B2 / Linux / CANN 9.0.1 / Python 3.11.
-# Install torch==2.10.0 from the CPU wheel index first (see NPU_ASCEND.md).
+# Ascend 910B2 / CANN 9.0.1 / Linux / Python 3.11.
+# The +cpu pin selects PyTorch's CPU wheel on both x86_64 and aarch64.
+--extra-index-url https://download.pytorch.org/whl/cpu
 -r requirements.txt
-torch==2.10.0
+torch==2.10.0+cpu
 torch-npu==2.10.0.post2

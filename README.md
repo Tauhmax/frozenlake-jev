@@ -10,7 +10,7 @@
 |---|---|
 | `requirements.txt` | 所有模型与设备共享的依赖；不安装硬件运行库 |
 | `requirements-cuda.txt` | 公共依赖 + PyTorch 2.6.0/cu124 + bitsandbytes 0.46.1 |
-| `requirements-npu.txt` | 公共依赖 + PyTorch 2.10.0 / torch-npu 2.10.0.post2；910B2 / CANN 9.0.1 |
+| `requirements-npu.txt` | 公共依赖 + PyTorch 2.10.0+cpu / torch-npu 2.10.0.post2；910B2 / CANN 9.0.1 |
 | `requirements-dev.txt` | 公共依赖 + Ruff；用于开发检查 |
 
 CUDA 已验证：Windows、Python 3.11.16、RTX 3070 8GB。NPU 的主机条件、安装和验收步骤见 [NPU_ASCEND.md](NPU_ASCEND.md)，尚未在实体 NPU 验证。
