@@ -19,13 +19,21 @@ def main():
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--load-in-4bit", action="store_true")
     parser.add_argument("--output", default="results/run.json")
+    parser.add_argument("--max-input-tokens", type=int)
     args = parser.parse_args()
+    if args.max_input_tokens is not None and args.max_input_tokens < 1:
+        parser.error("max-input-tokens must be positive")
     config = json.loads(Path(args.config).read_text(encoding="utf-8"))
     output = Path(args.output)
     if output.exists():
         parser.error(f"Output exists: {output}. Use a new path to preserve cache.")
     policy = (
-        ChoiceTokenJev(args.model_dir, args.device, args.load_in_4bit)
+        ChoiceTokenJev(
+            args.model_dir,
+            args.device,
+            args.load_in_4bit,
+            max_input_tokens=args.max_input_tokens,
+        )
         if args.model_dir
         else None
     )

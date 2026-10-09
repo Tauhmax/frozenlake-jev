@@ -40,9 +40,9 @@ python -m ruff check src scripts tests
 python -m ruff format --check src scripts tests
 ```
 
-Install `requirements-dev.txt` for Ruff. Prefer the existing three focused tests:
+Install `requirements-dev.txt` for Ruff. Keep the focused checks:
 BFS versus VI with boundaries, holes, terminals and ties; finite horizon and final
-move semantics; single-token choice position. Validate new checkpoint tokenizers
+move semantics; single-token choice position; HTTP batch limits and error details. Validate new checkpoint tokenizers
 and an actual forward before large runs. Hardware-specific execution must be
 reported as unverified until tested on that hardware.
 

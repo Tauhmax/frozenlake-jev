@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -18,8 +19,12 @@ def request(url, data=None):
     req = urllib.request.Request(
         url, data=payload, headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req, timeout=300) as response:
-        return json.load(response)
+    try:
+        with urllib.request.urlopen(req, timeout=300) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {error.code} from {url}: {detail}") from error
 
 
 def main():
@@ -32,8 +37,8 @@ def main():
         "--limit", type=int, default=0, help="Pilot size; 0 scores all states"
     )
     args = parser.parse_args()
-    if not 1 <= args.batch_size <= 16 or args.limit < 0:
-        parser.error("Batch size must be 1..16 and limit nonnegative")
+    if args.batch_size < 1 or args.limit < 0:
+        parser.error("Batch size must be positive and limit nonnegative")
     dataset_path = Path(args.dataset)
     dataset = [json.loads(line) for line in dataset_path.read_text().splitlines()]
     output = Path(args.output)

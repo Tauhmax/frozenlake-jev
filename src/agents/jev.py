@@ -9,7 +9,9 @@ from src.agents.prompt import prepare_choice_tokens
 
 
 class ChoiceTokenJev:
-    def __init__(self, model_dir, device="cpu", load_in_4bit=False):
+    def __init__(
+        self, model_dir, device="cpu", load_in_4bit=False, max_input_tokens=None
+    ):
         path = Path(model_dir).resolve()
         if not (path / "config.json").is_file():
             raise ValueError(f"No local model in {path}; see README.md")
@@ -30,6 +32,7 @@ class ChoiceTokenJev:
         )
         self.tokenizer = AutoTokenizer.from_pretrained(path, local_files_only=True)
         self.load_in_4bit = load_in_4bit
+        self.max_input_tokens = max_input_tokens
         options = {"local_files_only": True, "dtype": "auto"}
         if load_in_4bit:
             if self.device.type != "cuda" or not torch.cuda.is_available():
@@ -65,13 +68,13 @@ class ChoiceTokenJev:
         return self.predict_batch([prompt])[0]
 
     def predict_batch(self, prompts):
-        if not 1 <= len(prompts) <= 16:
-            raise ValueError("Batch must contain 1 to 16 prompts")
+        if not prompts:
+            raise ValueError("Batch must contain at least one prompt")
         torch = self.torch
         prepared = [prepare_choice_tokens(self.tokenizer, p) for p in prompts]
         lengths = [len(ids) for _, ids, _ in prepared]
-        if max(lengths) > 2048:
-            raise ValueError("Prompt exceeds 2048 tokens; shorten the input")
+        if self.max_input_tokens is not None and max(lengths) > self.max_input_tokens:
+            raise ValueError(f"Prompt exceeds max_input_tokens={self.max_input_tokens}")
         pad = self.tokenizer.pad_token_id
         if pad is None:
             pad = self.tokenizer.eos_token_id

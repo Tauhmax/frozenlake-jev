@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--limit", type=int, default=0)
     args = parser.parse_args()
-    if args.max_steps < 1 or not 1 <= args.batch_size <= 16 or args.limit < 0:
+    if args.max_steps < 1 or args.batch_size < 1 or args.limit < 0:
         parser.error("Invalid horizon, batch size, or limit")
     dataset = Path(args.dataset)
     maps = {}

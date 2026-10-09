@@ -63,7 +63,7 @@ python -m src.evaluation.dataset --maps 1000 --seed 42 --output results/datasets
 python -u -m src.evaluation.episodes --dataset results/datasets/frozenlake-1000-state-v2.jsonl --output results/episodes/qwen35-max30.jsonl --max-steps 30 --batch-size 16
 ```
 
-已有同名数据集时直接复用，跳过生成命令。测试 4B 时将输出改为 `results/episodes/qwen4b-max30.jsonl`。若目标设备无法容纳当前批次，减小 `--batch-size` 并使用新输出文件。
+已有同名数据集时直接复用，跳过生成命令。测试 4B 时将输出改为 `results/episodes/qwen4b-max30.jsonl`。若目标设备无法容纳当前批次，减小 `--batch-size` 并使用新输出文件。客户端通过 `--batch-size` 设置实际批次，默认 16；服务默认不限制批次。HTTP 错误会输出服务端原因。
 
 每张地图从真实 S 开始。每次输入包含更新后的位置、完整规则和剩余预算；选择四个动作中分数最大的一个并执行。进入 G 成功、进入 H 失败，其余情况到 30 步超时；第 30 步进入 G 仍成功，撞边界和重复访问也消耗步数。模型不接收 oracle 标签。有限步数 Q 值随剩余预算变化。
 
@@ -86,7 +86,7 @@ python -m src.evaluation.bulk --dataset results/datasets/frozenlake-1000-state-v
 {"states": [{"board": "PF\nFG", "gamma": 0.99, "remaining_steps": 30}]}
 ```
 
-也支持 `{"prompts": ["完整提示词"]}`。省略 `remaining_steps` 表示无限时域单状态评分。每批 1–16 个输入，每条最多 2,048 tokens。A/B/C/D 对应 LEFT/DOWN/RIGHT/UP；每个选项必须恰好是一个 next token。输出概率仅在四个动作间归一化，不等同于校准后的正确率。完整提示示例见 [state-example.md](docs/state-example.md)。
+也支持 `{"prompts": ["完整提示词"]}`。省略 `remaining_steps` 表示无限时域单状态评分。服务不设置硬编码上限；可选参数 `--max-batch-size`、`--max-input-tokens`、`--max-request-bytes` 分别设置批次、单条 token 数和 HTTP 请求体字节上限，省略表示不限制。`/health` 返回生效值（`null` 为未设置）。`src.run` 同样支持 `--max-input-tokens`。A/B/C/D 对应 LEFT/DOWN/RIGHT/UP；每个选项必须恰好是一个 next token。输出概率仅在四个动作间归一化，不等同于校准后的正确率。完整提示示例见 [state-example.md](docs/state-example.md)。
 
 ## 结构与检查
 
@@ -99,7 +99,7 @@ python -m ruff check src scripts tests
 python -m ruff format --check src scripts tests
 ```
 
-保留三个聚焦测试：BFS 与 VI、终止和边界规则；有限时域与第 30 步终止；choice-token 位置验证。NPU 需要在目标机器额外完成实际模型前向验证。
+聚焦测试覆盖：BFS 与 VI、终止和边界规则；有限时域与第 30 步终止；choice-token 位置验证，以及 HTTP 批次上限和错误详情。NPU 需要在目标机器额外完成实际模型前向验证。
 
 ## 实验记录
 

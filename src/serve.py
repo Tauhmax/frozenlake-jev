@@ -19,8 +19,20 @@ def main():
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--load-in-4bit", action="store_true")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--max-batch-size", type=int)
+    parser.add_argument("--max-input-tokens", type=int)
+    parser.add_argument("--max-request-bytes", type=int)
     args = parser.parse_args()
-    policy = ChoiceTokenJev(args.model_dir, args.device, args.load_in_4bit)
+    for name in ("max_batch_size", "max_input_tokens", "max_request_bytes"):
+        limit = getattr(args, name)
+        if limit is not None and limit < 1:
+            parser.error(f"{name.replace('_', '-')} must be positive")
+    policy = ChoiceTokenJev(
+        args.model_dir,
+        args.device,
+        args.load_in_4bit,
+        max_input_tokens=args.max_input_tokens,
+    )
     policy.torch.manual_seed(42)
     source = b"".join(
         Path(p).read_bytes()
@@ -39,8 +51,9 @@ def main():
         "seed": 42,
         "prompt_version": PROMPT_VERSION,
         "episode_prompt_version": EPISODE_PROMPT_VERSION,
-        "max_batch_size": 16,
-        "max_input_tokens": 2048,
+        "max_batch_size": args.max_batch_size,
+        "max_input_tokens": args.max_input_tokens,
+        "max_request_bytes": args.max_request_bytes,
     }
 
     class Handler(BaseHTTPRequestHandler):
@@ -64,8 +77,16 @@ def main():
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
-                if not 0 < length <= 1_000_000:
-                    raise ValueError("Request body must be between 1 byte and 1 MB")
+                if length < 1:
+                    raise ValueError("Request body is empty")
+                if (
+                    args.max_request_bytes is not None
+                    and length > args.max_request_bytes
+                ):
+                    raise ValueError(
+                        "Request body exceeds "
+                        f"max_request_bytes={args.max_request_bytes}"
+                    )
                 data = json.loads(self.rfile.read(length))
                 if "states" in data and "prompts" in data:
                     raise ValueError("Supply either states or prompts, not both")
@@ -74,13 +95,20 @@ def main():
                     states = data["states"]
                     if (
                         not isinstance(states, list)
-                        or not 1 <= len(states) <= 16
+                        or not states
                         or any(
                             not isinstance(s, dict) or "board" not in s for s in states
                         )
                     ):
                         raise ValueError(
-                            "states must contain 1 to 16 objects with board"
+                            "states must contain nonempty objects with board"
+                        )
+                    if (
+                        args.max_batch_size is not None
+                        and len(states) > args.max_batch_size
+                    ):
+                        raise ValueError(
+                            f"Batch exceeds max_batch_size={args.max_batch_size}"
                         )
                     prompts = [
                         format_prompt(
@@ -90,10 +118,17 @@ def main():
                     ]
                 if (
                     not isinstance(prompts, list)
-                    or not 1 <= len(prompts) <= 16
+                    or not prompts
                     or any(not isinstance(p, str) or not p for p in prompts)
                 ):
-                    raise ValueError("prompts must contain 1 to 16 nonempty strings")
+                    raise ValueError("prompts must contain nonempty strings")
+                if (
+                    args.max_batch_size is not None
+                    and len(prompts) > args.max_batch_size
+                ):
+                    raise ValueError(
+                        f"Batch exceeds max_batch_size={args.max_batch_size}"
+                    )
                 self.reply(200, {"predictions": policy.predict_batch(prompts)})
             except (ValueError, TypeError, AttributeError) as error:
                 self.reply(400, {"error": str(error)})

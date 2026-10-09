@@ -65,7 +65,7 @@ python -u -m src.serve --model-dir models/Qwen3.5-0.8B --device npu:0 --port 800
 python -u -m src.evaluation.episodes --dataset results/datasets/frozenlake-1000-state-v2.jsonl --output results/episodes/qwen35-npu-max30.jsonl --max-steps 30 --batch-size 16
 ```
 
-4B 使用新输出名 `qwen4b-npu-max30.jsonl`。批次按设备内存选择；精度、设备或批次改变时使用新缓存。NPU BF16 与 CUDA NF4 是不同精度的比较。
+4B 使用新输出名 `qwen4b-npu-max30.jsonl`。服务默认不限制批次，客户端直接用 `--batch-size 32` 等设置实际批次。需要显式上限时在服务启动命令添加 `--max-batch-size`、`--max-input-tokens` 或 `--max-request-bytes`。精度、设备或批次改变时使用新缓存。NPU BF16 与 CUDA NF4 是不同精度的比较。
 
 保留运行环境记录：
 
