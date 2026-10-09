@@ -76,6 +76,15 @@ class ServiceTests(unittest.TestCase):
                         ),
                         64,
                     )
+                with patch.object(
+                    policy, "predict_batch", side_effect=ValueError("forward failed")
+                ):
+                    with patch.object(serve.traceback, "print_exc") as log_error:
+                        with self.assertRaisesRegex(
+                            RuntimeError, "HTTP 500.*inference.*forward failed"
+                        ):
+                            request(url + "/score", {"prompts": ["test"]}, timeout=5)
+                        log_error.assert_called_once()
             finally:
                 if ready.is_set():
                     servers[0].shutdown()

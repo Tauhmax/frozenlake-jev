@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 from collections import Counter
 from pathlib import Path
 
@@ -50,10 +51,17 @@ def main():
     parser.add_argument("--url", default="http://127.0.0.1:8000")
     parser.add_argument("--max-steps", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument(
+        "--request-timeout", type=float, help="Seconds; default: no timeout"
+    )
     parser.add_argument("--limit", type=int, default=0)
     args = parser.parse_args()
     if args.max_steps < 1 or args.batch_size < 1 or args.limit < 0:
         parser.error("Invalid horizon, batch size, or limit")
+    if args.request_timeout is not None and (
+        not math.isfinite(args.request_timeout) or args.request_timeout <= 0
+    ):
+        parser.error("request-timeout must be finite and positive")
     dataset = Path(args.dataset)
     maps = {}
     for line in dataset.read_text().splitlines():
@@ -64,7 +72,7 @@ def main():
     selected = list(maps.values())[: args.limit or None]
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    health = request(args.url + "/health")
+    health = request(args.url + "/health", timeout=args.request_timeout)
     if (
         not health.get("ready")
         or health["model"].get("episode_prompt_version") != EPISODE_PROMPT_VERSION
@@ -189,9 +197,9 @@ def main():
                 )
                 for i in active
             ]
-            predictions = request(args.url + "/score", {"prompts": prompts})[
-                "predictions"
-            ]
+            predictions = request(
+                args.url + "/score", {"prompts": prompts}, timeout=args.request_timeout
+            )["predictions"]
             if len(predictions) != len(active):
                 raise RuntimeError("Incorrect prediction count")
             survivors = []

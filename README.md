@@ -63,7 +63,7 @@ python -m src.evaluation.dataset --maps 1000 --seed 42 --output results/datasets
 python -u -m src.evaluation.episodes --dataset results/datasets/frozenlake-1000-state-v2.jsonl --output results/episodes/qwen35-max30.jsonl --max-steps 30 --batch-size 16
 ```
 
-已有同名数据集时直接复用，跳过生成命令。测试 4B 时将输出改为 `results/episodes/qwen4b-max30.jsonl`。若目标设备无法容纳当前批次，减小 `--batch-size` 并使用新输出文件。客户端通过 `--batch-size` 设置实际批次，默认 16；服务默认不限制批次。HTTP 错误会输出服务端原因。
+已有同名数据集时直接复用，跳过生成命令。测试 4B 时将输出改为 `results/episodes/qwen4b-max30.jsonl`。若目标设备无法容纳当前批次，减小 `--batch-size` 并使用新输出文件。客户端通过 `--batch-size` 设置实际批次，默认 16；服务默认不限制批次。HTTP 错误会输出服务端原因：400 表示请求校验失败，500 表示模型推理失败并在服务终端打印 traceback。两个评测入口均支持 `--request-timeout 秒数`，默认不设请求超时。
 
 每张地图从真实 S 开始。每次输入包含更新后的位置、完整规则和剩余预算；选择四个动作中分数最大的一个并执行。进入 G 成功、进入 H 失败，其余情况到 30 步超时；第 30 步进入 G 仍成功，撞边界和重复访问也消耗步数。模型不接收 oracle 标签。有限步数 Q 值随剩余预算变化。
 

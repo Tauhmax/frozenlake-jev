@@ -14,13 +14,13 @@ from src.evaluation.metrics import score
 from src.evaluation.report import build_report
 
 
-def request(url, data=None):
+def request(url, data=None, timeout=None):
     payload = json.dumps(data).encode() if data is not None else None
     req = urllib.request.Request(
         url, data=payload, headers={"Content-Type": "application/json"}
     )
     try:
-        with urllib.request.urlopen(req, timeout=300) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
@@ -34,17 +34,24 @@ def main():
     parser.add_argument("--output", default="results/predictions/qwen35-1000.jsonl")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument(
+        "--request-timeout", type=float, help="Seconds; default: no timeout"
+    )
+    parser.add_argument(
         "--limit", type=int, default=0, help="Pilot size; 0 scores all states"
     )
     args = parser.parse_args()
     if args.batch_size < 1 or args.limit < 0:
         parser.error("Batch size must be positive and limit nonnegative")
+    if args.request_timeout is not None and (
+        not math.isfinite(args.request_timeout) or args.request_timeout <= 0
+    ):
+        parser.error("request-timeout must be finite and positive")
     dataset_path = Path(args.dataset)
     dataset = [json.loads(line) for line in dataset_path.read_text().splitlines()]
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     metadata_path = output.with_suffix(".meta.json")
-    health = request(args.url + "/health")
+    health = request(args.url + "/health", timeout=args.request_timeout)
     if not health.get("ready"):
         raise RuntimeError("Model server is not ready")
     metadata = {
@@ -103,9 +110,9 @@ def main():
                         "Dataset state_text is stale; regenerate the dataset"
                     )
                 prompts.append(text)
-            predictions = request(args.url + "/score", {"prompts": prompts})[
-                "predictions"
-            ]
+            predictions = request(
+                args.url + "/score", {"prompts": prompts}, timeout=args.request_timeout
+            )["predictions"]
             if len(predictions) != len(batch):
                 raise RuntimeError("Server returned an incorrect batch size")
             for row, prediction in zip(batch, predictions):

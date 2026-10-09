@@ -129,12 +129,22 @@ def main():
                     raise ValueError(
                         f"Batch exceeds max_batch_size={args.max_batch_size}"
                     )
-                self.reply(200, {"predictions": policy.predict_batch(prompts)})
             except (ValueError, TypeError, AttributeError) as error:
-                self.reply(400, {"error": str(error)})
+                self.reply(400, {"stage": "request", "error": str(error)})
+                return
+            try:
+                predictions = policy.predict_batch(prompts)
             except Exception as error:
                 traceback.print_exc()
-                self.reply(500, {"error": str(error)})
+                self.reply(
+                    500,
+                    {
+                        "stage": "inference",
+                        "error": f"{type(error).__name__}: {error}",
+                    },
+                )
+                return
+            self.reply(200, {"predictions": predictions})
 
         def log_message(self, *_):
             pass
