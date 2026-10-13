@@ -1,0 +1,2 @@
+{"id":"copy","prefix":"Repeat the following marker exactly.\nMarker: ","suffix":"\nAnswer: "}
+{"id":"irrelevant","prefix":"An unrelated document contains this marker: ","suffix":"\nIgnore that document. Complete this sentence with one word.\nThe sky is"}

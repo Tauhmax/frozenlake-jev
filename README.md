@@ -101,6 +101,10 @@ python -m ruff format --check src scripts tests
 
 聚焦测试覆盖：BFS 与 VI、终止和边界规则；有限时域与第 30 步终止；choice-token 位置验证，以及 HTTP 批次上限和错误详情。NPU 需要在目标机器额外完成实际模型前向验证。
 
+## Decision-token 探针
+
+[decision_tokens/](decision_tokens/README.md) 提供 A/B/C/D 和输入 embedding 模长最大、最小、中间四项的选取策略，并测量前文插入 token 对末尾候选分布的影响。
+
 ## 实验记录
 
 - [原始短提示单状态实验](docs/bulk-pilot.md)
