@@ -1,5 +1,7 @@
 # Decision-token probe
 
+关于推理触发词与单次前向的研究假设，见 [reasoning_triggers.md](reasoning_triggers.md)。
+
 在原厂 post-trained Qwen（未经 JevAny 微调）上，选择四个候选 token，在前文同一位置依次插入它们，读取末尾 decision 位置的分布。工具与具体下游任务无关；只做前向，不生成推理文本。
 
 ## 四组策略
