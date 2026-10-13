@@ -34,6 +34,10 @@ python -m decision_tokens.probe \
 
 CUDA 使用 `--device cuda:0`；CPU 使用 `--device cpu`。`--strategies abcd longest` 可只运行指定组；`--load-in-4bit` 沿用仓库 CUDA 量化加载方式。比较实验须保持模型、精度和模板一致。输出文件必须是新路径，以避免混合不同实验。
 
+## 多数据集 zero-shot 评估
+
+题目已准备在 [data/](../data/README.md)。只有评估集；token 策略预先固定，答案仅用于评分。使用 `--datasets data/*/eval.jsonl` 可在一次模型加载中运行全部数据集，或传入指定 JSONL 路径。选项标签由每组策略的实际 token ID 动态构造；结果额外包含预测选项索引与正确性。
+
 ## 探针定义
 
 每条 JSONL 模板给出 `id`、`prefix` 和 `suffix`：

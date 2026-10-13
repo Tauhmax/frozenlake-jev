@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "seed": 42,
+  "eval_size": 400,
+  "datasets": {
+    "arc_challenge": {
+      "source": {
+        "name": "arc_challenge",
+        "repo": "allenai/ai2_arc",
+        "config": "ARC-Challenge",
+        "split": "test",
+        "revision": "210d026faf9955653af8916fad021475a3f00453",
+        "license": [
+          "cc-by-sa-4.0"
+        ],
+        "url": "https://huggingface.co/datasets/allenai/ai2_arc"
+      },
+      "source_rows": 1172,
+      "eligible_rows": 1165,
+      "deduplicated_rows": 1165,
+      "independent_groups": 1163,
+      "source_pages_sha256": "9e8decce991c2eed91a3f5245535e232f1bffdccac6aabf9c275dfba715ed7e3",
+      "splits": {
+        "eval": {
+          "count": 400,
+          "sha256": "4105ec70043649c16e7a269407d1f3d1fa0b797b1967fc657003c77bd0122dc2",
+          "answers": {
+            "0": 96,
+            "1": 105,
+            "2": 107,
+            "3": 92
+          },
+          "categories": 1
+        }
+      }
+    },
+    "openbookqa": {
+      "source": {
+        "name": "openbookqa",
+        "repo": "allenai/openbookqa",
+        "config": "main",
+        "split": "test",
+        "revision": "388097ea7776314e93a529163e0fea805b8a6454",
+        "license": [
+          "unknown"
+        ],
+        "url": "https://huggingface.co/datasets/allenai/openbookqa"
+      },
+      "source_rows": 500,
+      "eligible_rows": 500,
+      "deduplicated_rows": 500,
+      "independent_groups": 498,
+      "source_pages_sha256": "1977fbd2d403bf55636db7df0dd84009cdde117bba21a13d82a8effb9cec537c",
+      "splits": {
+        "eval": {
+          "count": 400,
+          "sha256": "ab45286fbe88641a0d27ad7b45cc613bdaae8e1e830d5524b935e24409dc5ac9",
+          "answers": {
+            "0": 106,
+            "1": 100,
+            "2": 106,
+            "3": 88
+          },
+          "categories": 1
+        }
+      }
+    },
+    "hellaswag": {
+      "source": {
+        "name": "hellaswag",
+        "repo": "Rowan/hellaswag",
+        "config": "default",
+        "split": "validation",
+        "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+        "license": null,
+        "url": "https://huggingface.co/datasets/Rowan/hellaswag"
+      },
+      "source_rows": 10042,
+      "eligible_rows": 10042,
+      "deduplicated_rows": 10042,
+      "independent_groups": 8407,
+      "source_pages_sha256": "c63b4a51631ff471cfc3afc660a5e7c30d2cbb96ec30549c7db8cd9f042d9d81",
+      "splits": {
+        "eval": {
+          "count": 400,
+          "sha256": "0e42513f66d26d66be9aabb367717852fc855d79d20cdac0393e5863358f3699",
+          "answers": {
+            "0": 97,
+            "1": 86,
+            "2": 115,
+            "3": 102
+          },
+          "categories": 192
+        }
+      }
+    },
+    "race": {
+      "source": {
+        "name": "race",
+        "repo": "ehovy/race",
+        "config": "all",
+        "split": "validation",
+        "revision": "2fec9fd81f1dc971569a9b729c43f2f0e6436637",
+        "license": [
+          "other"
+        ],
+        "url": "https://huggingface.co/datasets/ehovy/race"
+      },
+      "source_rows": 4887,
+      "eligible_rows": 4883,
+      "deduplicated_rows": 4883,
+      "independent_groups": 1389,
+      "source_pages_sha256": "30bece2c49ff050d035eb8a0820d8fb3762d19ae5656b098fde35da7d00e9129",
+      "splits": {
+        "eval": {
+          "count": 400,
+          "sha256": "0b257cf3fc369448c23686e56d16f9f73baab8993764edda56e37e72c62c514d",
+          "answers": {
+            "0": 80,
+            "1": 111,
+            "2": 114,
+            "3": 95
+          },
+          "categories": 2
+        }
+      }
+    },
+    "mmlu": {
+      "source": {
+        "name": "mmlu",
+        "repo": "cais/mmlu",
+        "config": "all",
+        "split": "validation",
+        "revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+        "license": [
+          "mit"
+        ],
+        "url": "https://huggingface.co/datasets/cais/mmlu"
+      },
+      "source_rows": 1531,
+      "eligible_rows": 1528,
+      "deduplicated_rows": 1526,
+      "independent_groups": 1525,
+      "source_pages_sha256": "b83738ae749ed5291f2642dc6beaf0c5761b6de01f6c00495cc86ba33a22963d",
+      "splits": {
+        "eval": {
+          "count": 400,
+          "sha256": "8770f85957a1b0c6e85cfd91d29d4ff53df24a0e47516eaceb39b71b57644cd5",
+          "answers": {
+            "0": 113,
+            "1": 94,
+            "2": 90,
+            "3": 103
+          },
+          "categories": 57
+        }
+      }
+    }
+  }
+}

@@ -52,5 +52,23 @@ class DecisionTokenTests(unittest.TestCase):
             self.assertAlmostEqual(sum(column), 0)
 
 
+class DatasetPromptTests(unittest.TestCase):
+    def test_gold_answer_does_not_change_model_input(self):
+        from decision_tokens.probe import prepare_context
+
+        tokenizer = SimpleNamespace(encode=lambda text, **kwargs: list(text.encode()))
+        question = {
+            "question": "Which word matches the passage?",
+            "context": "A bird flies.",
+            "choices": ["bird", "fish", "tree", "stone"],
+            "answer": 0,
+        }
+        candidates = [1000, 1001, 1002, 1003]
+        prefix, suffix = prepare_context(tokenizer, question, candidates)
+        other = prepare_context(tokenizer, {**question, "answer": 3}, candidates)
+        self.assertEqual((prefix, suffix), other)
+        self.assertEqual([x for x in suffix if x >= 1000], candidates)
+
+
 if __name__ == "__main__":
     unittest.main()

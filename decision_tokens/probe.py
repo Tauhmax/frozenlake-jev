@@ -92,12 +92,34 @@ def score(engine, input_ids, candidates):
     }
 
 
+def prepare_context(tokenizer, template, candidates):
+    """Render task data without exposing the gold answer to the model."""
+
+    def encode(text):
+        return tokenizer.encode(text, add_special_tokens=False)
+
+    if "question" not in template:
+        return encode(template["prefix"]), encode(template["suffix"])
+    nl = chr(10)
+    prefix = encode("An unrelated document contains this marker: ")
+    suffix = encode(
+        nl + "Ignore the unrelated document. Choose the best option for the question. "
+        "Return only the label token preceding that option, with no explanation." + nl
+    )
+    if template.get("context"):
+        suffix += encode(nl + "Passage:" + nl + template["context"] + nl)
+    suffix += encode(nl + "Question: " + template["question"] + nl + "Options:" + nl)
+    for token_id, choice in zip(candidates, template["choices"]):
+        suffix += [token_id] + encode(": " + choice + nl)
+    suffix += encode(nl + "Answer: ")
+    return prefix, suffix
+
+
 def run_probe(engine, template, tokens):
     """Insert exact IDs, preserving all surrounding IDs across interventions."""
     tokenizer = engine.tokenizer
-    prefix = tokenizer.encode(template["prefix"], add_special_tokens=False)
-    suffix = tokenizer.encode(template["suffix"], add_special_tokens=False)
     candidates = [token["id"] for token in tokens]
+    prefix, suffix = prepare_context(tokenizer, template, candidates)
     baseline = score(engine, prefix + suffix, candidates)
     rows = []
     for token_id in candidates:
@@ -107,6 +129,12 @@ def run_probe(engine, template, tokens):
             p - b for p, b in zip(result["probabilities"], baseline["probabilities"])
         ]
         rows.append(result)
+    if "answer" in template:
+        for result in [baseline, *rows]:
+            result["predicted_index"] = max(
+                range(len(candidates)), key=result["probabilities"].__getitem__
+            )
+            result["correct"] = result["predicted_index"] == template["answer"]
     # Center each row, then each column: token-specific relative logit effects.
     centered = [
         [v - sum(row["logits"]) / len(candidates) for v in row["logits"]]
@@ -137,17 +165,32 @@ def main():
     parser.add_argument("--exclude-special", action="store_true")
     parser.add_argument("--select-only", action="store_true")
     parser.add_argument("--templates", type=Path)
+    parser.add_argument("--datasets", type=Path, nargs="+", default=[])
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     templates = []
     if not args.select_only:
-        if args.templates is None:
-            parser.error("--templates is required unless --select-only is set")
-        for line in args.templates.read_text(encoding="utf-8").splitlines():
-            if line.strip():
+        paths = ([args.templates] if args.templates else []) + args.datasets
+        if not paths:
+            parser.error("--templates or --datasets is required")
+        for path in paths:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
                 item = json.loads(line)
-                if not all(isinstance(item.get(k), str) for k in ("prefix", "suffix")):
-                    parser.error("Each template needs string prefix and suffix fields")
+                is_template = all(
+                    isinstance(item.get(k), str) for k in ("prefix", "suffix")
+                )
+                is_mcq = (
+                    isinstance(item.get("question"), str)
+                    and isinstance(item.get("choices"), list)
+                    and len(item["choices"]) == 4
+                    and all(isinstance(x, str) for x in item["choices"])
+                    and type(item.get("answer")) is int
+                    and 0 <= item["answer"] < 4
+                )
+                if not (is_template or is_mcq):
+                    parser.error(f"Invalid template or four-choice record in {path}")
                 templates.append(item)
         if not templates:
             parser.error("No templates found")
@@ -168,6 +211,7 @@ def main():
             "exclude_special": args.exclude_special,
             "readout": "exact_token_id",
             "prompt_format": "raw_segmented_token_ids",
+            "mcq_prompt_version": "mcq-marker-v1",
             "strategies": groups,
         }
         output.write(json.dumps(metadata, ensure_ascii=False) + "\n")

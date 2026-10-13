@@ -105,6 +105,8 @@ python -m ruff format --check src scripts tests
 
 [decision_tokens/](decision_tokens/README.md) 提供 A/B/C/D 和输入 embedding 模长最大、最小、中间四项的选取策略，并测量前文插入 token 对末尾候选分布的影响。
 
+跨数据集 zero-shot 题目和复现命令见 [data/](data/README.md)。
+
 ## 实验记录
 
 - [原始短提示单状态实验](docs/bulk-pilot.md)

@@ -1,0 +1,55 @@
+[
+  {
+    "name": "arc_challenge",
+    "repo": "allenai/ai2_arc",
+    "config": "ARC-Challenge",
+    "split": "test",
+    "revision": "210d026faf9955653af8916fad021475a3f00453",
+    "license": [
+      "cc-by-sa-4.0"
+    ],
+    "url": "https://huggingface.co/datasets/allenai/ai2_arc"
+  },
+  {
+    "name": "openbookqa",
+    "repo": "allenai/openbookqa",
+    "config": "main",
+    "split": "test",
+    "revision": "388097ea7776314e93a529163e0fea805b8a6454",
+    "license": [
+      "unknown"
+    ],
+    "url": "https://huggingface.co/datasets/allenai/openbookqa"
+  },
+  {
+    "name": "hellaswag",
+    "repo": "Rowan/hellaswag",
+    "config": "default",
+    "split": "validation",
+    "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "license": null,
+    "url": "https://huggingface.co/datasets/Rowan/hellaswag"
+  },
+  {
+    "name": "race",
+    "repo": "ehovy/race",
+    "config": "all",
+    "split": "validation",
+    "revision": "2fec9fd81f1dc971569a9b729c43f2f0e6436637",
+    "license": [
+      "other"
+    ],
+    "url": "https://huggingface.co/datasets/ehovy/race"
+  },
+  {
+    "name": "mmlu",
+    "repo": "cais/mmlu",
+    "config": "all",
+    "split": "validation",
+    "revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+    "license": [
+      "mit"
+    ],
+    "url": "https://huggingface.co/datasets/cais/mmlu"
+  }
+]
